@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/WeaponData.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+id = "pistol_talon"
+display_name = "Talon .45"
+category = 0
+damage = 30.0
+headshot_multiplier = 2.0
+limb_multiplier = 0.85
+pellets = 1
+falloff_start = 20.0
+falloff_end = 45.0
+min_damage_scale = 0.6
+max_range = 120.0
+fire_rate = 320.0
+automatic = false
+mag_size = 12
+reserve_ammo = 60
+reload_time = 1.5
+equip_time = 0.32
+spread_hip = 1.6
+spread_ads = 0.25
+spread_move_penalty = 1.4
+spread_per_shot = 0.55
+spread_max = 6.0
+spread_recovery = 7.0
+recoil_vertical = 0.9
+recoil_horizontal = 0.3
+recoil_recovery = 9.0
+ads_fov = 58.0
+ads_time = 0.13
+ads_move_scale = 0.7
+sfx_fire = "wpn_pistol_fire"
+anim_profile = "pistol"
+viewmodel_offset = Vector3(0.2, -0.16, -0.34)
+muzzle_flash_scale = 0.8
+model_path = "res://assets/weapons/models/pistol.glb"
+model_scale = 1.0
+model_offset = Vector3(0.0, 0.0, 0.0)
+model_rotation = Vector3(0.0, 0.0, 0.0)
+viewmodel_model_scale = 1.0
+viewmodel_rotation = Vector3(0.0, 180.0, 0.0)
+muzzle_local = Vector3(0.0, 0.02, -0.22)

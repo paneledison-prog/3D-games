@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="CharacterProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/characters/CharacterProfile.gd" id="1_cp"]
+
+[resource]
+script = ExtResource("1_cp")
+id = "crypto"
+display_name = "Crypto"
+description = "Hooded operative. Low profile, hard to read at range."
+accent_color = Color(0.68, 0.45, 0.98, 1)
+model_path = "res://assets/mixamo/characters/crypto.fbx"
+auto_fit_height = true
+target_height = 1.8
+model_scale = 1.0
+model_offset = Vector3(0.0, 0.0, 0.0)
+model_rotation_y = 180.0
+right_hand_bone = "RightHand"
+head_bone = "Head"
+grip_offset = Vector3(0.0, 0.0, 0.0)
+grip_rotation = Vector3(0.0, 0.0, 0.0)

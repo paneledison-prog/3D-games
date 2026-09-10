@@ -1,0 +1,25 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/main/Main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://scenes/arena/Arena.tscn" id="2_arena"]
+[ext_resource type="PackedScene" path="res://scenes/characters/Player.tscn" id="3_player"]
+[ext_resource type="PackedScene" path="res://scenes/characters/Bot.tscn" id="4_bot"]
+[ext_resource type="Script" path="res://scripts/game/RoundManager.gd" id="5_rm"]
+[ext_resource type="Script" path="res://scripts/ui/HUD.gd" id="6_hud"]
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="Arena" parent="." instance=ExtResource("2_arena")]
+
+[node name="Player" parent="." instance=ExtResource("3_player")]
+position = Vector3(-22, 0.1, -20)
+
+[node name="Bot" parent="." instance=ExtResource("4_bot")]
+position = Vector3(22, 0.1, 20)
+
+[node name="RoundManager" type="Node" parent="."]
+script = ExtResource("5_rm")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("6_hud")

@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/WeaponData.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+id = "sniper_specter"
+display_name = "Specter Bolt"
+category = 3
+damage = 90.0
+headshot_multiplier = 2.2
+limb_multiplier = 0.75
+pellets = 1
+falloff_start = 80.0
+falloff_end = 200.0
+min_damage_scale = 0.9
+max_range = 400.0
+fire_rate = 48.0
+automatic = false
+mag_size = 5
+reserve_ammo = 25
+reload_time = 3.0
+equip_time = 0.7
+spread_hip = 6.0
+spread_ads = 0.03
+spread_move_penalty = 4.0
+spread_per_shot = 2.5
+spread_max = 10.0
+spread_recovery = 4.0
+recoil_vertical = 3.2
+recoil_horizontal = 0.4
+recoil_recovery = 5.0
+ads_fov = 22.0
+ads_time = 0.3
+ads_move_scale = 0.35
+sfx_fire = "wpn_sniper_fire"
+sfx_bolt = "wpn_bolt"
+fire_volume_db = 0.0
+anim_profile = "rifle"
+viewmodel_offset = Vector3(0.2, -0.16, -0.52)
+muzzle_flash_scale = 1.4
+model_path = "res://assets/weapons/models/sniper.glb"
+model_scale = 1.0
+model_offset = Vector3(0.0, 0.0, 0.0)
+model_rotation = Vector3(0.0, 0.0, 0.0)
+viewmodel_model_scale = 1.0
+viewmodel_rotation = Vector3(0.0, 180.0, 0.0)
+muzzle_local = Vector3(0.0, 0.03, -0.72)

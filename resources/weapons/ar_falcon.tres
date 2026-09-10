@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/WeaponData.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+id = "ar_falcon"
+display_name = "Falcon AR"
+category = 2
+damage = 24.0
+headshot_multiplier = 2.0
+limb_multiplier = 0.85
+pellets = 1
+falloff_start = 25.0
+falloff_end = 60.0
+min_damage_scale = 0.6
+max_range = 200.0
+fire_rate = 620.0
+automatic = true
+mag_size = 30
+reserve_ammo = 120
+reload_time = 2.1
+equip_time = 0.45
+spread_hip = 2.2
+spread_ads = 0.3
+spread_move_penalty = 2.0
+spread_per_shot = 0.5
+spread_max = 8.0
+spread_recovery = 6.0
+recoil_vertical = 0.55
+recoil_horizontal = 0.22
+recoil_recovery = 8.0
+ads_fov = 52.0
+ads_time = 0.16
+ads_move_scale = 0.55
+sfx_fire = "wpn_rifle_fire"
+anim_profile = "rifle"
+viewmodel_offset = Vector3(0.22, -0.18, -0.42)
+muzzle_flash_scale = 1.0
+model_path = "res://assets/weapons/models/rifle.glb"
+model_scale = 1.0
+model_offset = Vector3(0.0, 0.0, 0.0)
+model_rotation = Vector3(0.0, 0.0, 0.0)
+viewmodel_model_scale = 1.0
+viewmodel_rotation = Vector3(0.0, 180.0, 0.0)
+muzzle_local = Vector3(0.0, 0.02, -0.46)

@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/WeaponData.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+id = "shotgun_breaker"
+display_name = "Breaker 12g"
+category = 4
+damage = 12.0
+headshot_multiplier = 1.5
+limb_multiplier = 0.9
+pellets = 9
+falloff_start = 8.0
+falloff_end = 22.0
+min_damage_scale = 0.25
+max_range = 60.0
+fire_rate = 90.0
+automatic = false
+mag_size = 6
+reserve_ammo = 30
+reload_time = 2.6
+equip_time = 0.55
+spread_hip = 5.5
+spread_ads = 3.5
+spread_move_penalty = 1.2
+spread_per_shot = 0.8
+spread_max = 9.0
+spread_recovery = 5.0
+recoil_vertical = 2.2
+recoil_horizontal = 0.5
+recoil_recovery = 6.0
+ads_fov = 62.0
+ads_time = 0.18
+ads_move_scale = 0.6
+sfx_fire = "wpn_shotgun_fire"
+anim_profile = "rifle"
+viewmodel_offset = Vector3(0.21, -0.17, -0.44)
+muzzle_flash_scale = 1.3
+model_path = "res://assets/weapons/models/shotgun.glb"
+model_scale = 1.0
+model_offset = Vector3(0.0, 0.0, 0.0)
+model_rotation = Vector3(0.0, 0.0, 0.0)
+viewmodel_model_scale = 1.0
+viewmodel_rotation = Vector3(0.0, 180.0, 0.0)
+muzzle_local = Vector3(0.0, 0.02, -0.55)

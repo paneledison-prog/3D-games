@@ -1,0 +1,85 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/ai/BotController.gd" id="1_bc"]
+[ext_resource type="Script" path="res://scripts/weapons/WeaponSystem.gd" id="2_ws"]
+[ext_resource type="Script" path="res://scripts/game/Health.gd" id="3_hp"]
+[ext_resource type="Script" path="res://scripts/animation/CharacterAnimator.gd" id="4_an"]
+[ext_resource type="Script" path="res://scripts/characters/CharacterRig.gd" id="5_rig"]
+[ext_resource type="Script" path="res://scripts/weapons/ViewModel.gd" id="6_vm"]
+
+[sub_resource type="CapsuleShape3D" id="body_shape"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="SphereShape3D" id="head_shape"]
+radius = 0.22
+
+[sub_resource type="CapsuleMesh" id="body_mesh"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="SphereMesh" id="head_mesh"]
+radius = 0.21
+height = 0.42
+
+[node name="Bot" type="CharacterBody3D"]
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_bc")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.9, 0)
+shape = SubResource("body_shape")
+
+[node name="AimPivot" type="Node3D" parent="."]
+position = Vector3(0, 1.55, 0)
+
+[node name="WeaponSystem" type="Node3D" parent="AimPivot"]
+script = ExtResource("2_ws")
+is_local_player = false
+
+[node name="Muzzle" type="Marker3D" parent="AimPivot/WeaponSystem"]
+position = Vector3(0.2, -0.03, -0.72)
+
+[node name="HeadBox" type="Area3D" parent="."]
+position = Vector3(0, 1.68, 0)
+collision_layer = 8
+collision_mask = 0
+monitoring = false
+monitorable = true
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="HeadBox"]
+shape = SubResource("head_shape")
+
+[node name="Body" type="Node3D" parent="."]
+script = ExtResource("5_rig")
+profile_id = "alien_soldier"
+shadows_only = false
+
+[node name="Placeholder" type="Node3D" parent="Body"]
+
+[node name="Mesh" type="MeshInstance3D" parent="Body/Placeholder"]
+position = Vector3(0, 0.9, 0)
+mesh = SubResource("body_mesh")
+
+[node name="Head" type="MeshInstance3D" parent="Body/Placeholder"]
+position = Vector3(0, 1.68, 0)
+mesh = SubResource("head_mesh")
+
+[node name="Health" type="Node" parent="."]
+script = ExtResource("3_hp")
+max_health = 100.0
+armor = 50.0
+armor_absorb = 0.5
+
+[node name="NavAgent" type="NavigationAgent3D" parent="."]
+path_desired_distance = 0.8
+target_desired_distance = 1.2
+avoidance_enabled = false
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="Animator" type="Node" parent="."]
+script = ExtResource("4_an")
+animation_player_path = NodePath("../AnimationPlayer")
+placeholder_visual_path = NodePath("../Body")

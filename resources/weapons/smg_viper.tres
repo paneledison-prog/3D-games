@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/WeaponData.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+id = "smg_viper"
+display_name = "Viper SMG"
+category = 1
+damage = 17.0
+headshot_multiplier = 1.7
+limb_multiplier = 0.85
+pellets = 1
+falloff_start = 12.0
+falloff_end = 32.0
+min_damage_scale = 0.5
+max_range = 100.0
+fire_rate = 900.0
+automatic = true
+mag_size = 30
+reserve_ammo = 150
+reload_time = 1.9
+equip_time = 0.38
+spread_hip = 2.6
+spread_ads = 0.7
+spread_move_penalty = 1.6
+spread_per_shot = 0.34
+spread_max = 7.5
+spread_recovery = 7.5
+recoil_vertical = 0.35
+recoil_horizontal = 0.28
+recoil_recovery = 10.0
+ads_fov = 60.0
+ads_time = 0.12
+ads_move_scale = 0.65
+sfx_fire = "wpn_smg_fire"
+anim_profile = "rifle"
+viewmodel_offset = Vector3(0.22, -0.17, -0.4)
+muzzle_flash_scale = 0.85
+model_path = "res://assets/weapons/models/smg.glb"
+model_scale = 1.0
+model_offset = Vector3(0.0, 0.0, 0.0)
+model_rotation = Vector3(0.0, 0.0, 0.0)
+viewmodel_model_scale = 1.0
+viewmodel_rotation = Vector3(0.0, 180.0, 0.0)
+muzzle_local = Vector3(0.0, 0.02, -0.34)

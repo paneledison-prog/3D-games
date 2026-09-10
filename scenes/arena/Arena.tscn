@@ -1,0 +1,54 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/arena/ArenaBuilder.gd" id="1_ab"]
+
+[sub_resource type="NavigationMesh" id="navmesh"]
+geometry_parsed_geometry_type = 1
+agent_radius = 0.5
+agent_height = 1.75
+agent_max_climb = 0.5
+cell_size = 0.25
+cell_height = 0.25
+
+[sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
+sky_top_color = Color(0.08, 0.1, 0.15, 1)
+sky_horizon_color = Color(0.19, 0.21, 0.25, 1)
+ground_bottom_color = Color(0.06, 0.07, 0.08, 1)
+ground_horizon_color = Color(0.19, 0.21, 0.25, 1)
+sun_angle_max = 12.0
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 3
+ambient_light_energy = 0.72
+tonemap_mode = 2
+tonemap_white = 6.0
+ssao_enabled = true
+ssao_intensity = 1.1
+glow_enabled = true
+glow_intensity = 0.5
+fog_enabled = true
+fog_light_color = Color(0.15, 0.17, 0.2, 1)
+fog_density = 0.006
+
+[node name="Arena" type="Node3D"]
+script = ExtResource("1_ab")
+
+[node name="NavRegion" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("navmesh")
+
+[node name="Spawns" type="Node3D" parent="."]
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.86, -0.31, 0.4, 0, 0.79, 0.61, -0.51, -0.53, 0.68, 0, 24, 0)
+light_energy = 1.45
+light_color = Color(1, 0.96, 0.9, 1)
+shadow_enabled = true
+directional_shadow_max_distance = 90.0
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
