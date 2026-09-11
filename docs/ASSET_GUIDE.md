@@ -91,7 +91,33 @@ not once per body.
 
 ## 3. Weapon models
 
-Five weapons look for these files:
+**Already installed.** Seven models from [Poly Pizza](https://poly.pizza), all by
+**Quaternius**, all **CC0 public domain** — free for any use, commercial
+included, no attribution required (crediting him is still decent form).
+
+| Slot | Weapon | File |
+| --- | --- | --- |
+| 1 | Falcon AR | `rifle.glb` |
+| 1 | Viper SMG | `smg.glb` |
+| 1 | Breaker 12g | `shotgun.glb` |
+| 1 | Specter Bolt | `sniper.glb` |
+| 2 | Talon .45 | `pistol.glb` |
+| 3 | Bayonet (melee) | `knife.glb` |
+| 4 | Frag Grenade (throwable) | `grenade.glb` |
+
+### Scale is handled automatically
+
+Downloaded models arrive at arbitrary scales — the Quaternius rifle imports
+**5.17 m long**. Rather than hand-tuning a factor per model, each weapon `.tres`
+declares a real-world `target_length` and the game measures the mesh on load and
+scales to match. Drop in any replacement model and it sizes itself.
+
+If a replacement points the wrong way, adjust `model_rotation` /
+`viewmodel_rotation` (these models run along X, so they use a 90 degree Y turn).
+
+### Replacing them
+
+The five gun slots look for these files:
 
 | Weapon | Expected file |
 | --- | --- |

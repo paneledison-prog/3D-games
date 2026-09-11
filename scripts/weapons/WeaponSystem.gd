@@ -142,6 +142,12 @@ func try_fire(origin: Vector3, direction: Vector3) -> bool:
 	if _cooldown > 0.0 or _equip_timer > 0.0 or is_reloading:
 		return false
 
+	# Melee and throwables run on entirely different rules to hitscan guns.
+	if w.is_melee():
+		return _swing_melee(w, origin, direction)
+	if w.is_throwable():
+		return _throw(w, origin, direction)
+
 	if mags[slot] <= 0:
 		_play("wpn_dry_fire", -8.0)
 		_cooldown = 0.25
@@ -183,9 +189,107 @@ func try_fire(origin: Vector3, direction: Vector3) -> bool:
 	return true
 
 
+# ---------------------------------------------------------------------- melee
+
+## A knife swing. No ammo, no spread; the damage lands a moment after the swing
+## starts so it connects when the blade visually arrives rather than instantly.
+func _swing_melee(w: WeaponData, origin: Vector3, direction: Vector3) -> bool:
+	_cooldown = w.seconds_per_shot()
+	_play("melee_swing", -4.0, 0.10)
+	fired.emit(w, w.recoil_vertical, 0.0)
+
+	# The hit is resolved on a timer rather than with await, so try_fire stays a
+	# plain synchronous bool instead of turning into a coroutine.
+	var tree := get_tree()
+	if tree != null and w.melee_hit_delay > 0.0:
+		tree.create_timer(w.melee_hit_delay).timeout.connect(
+				_resolve_melee_hit.bind(w, origin, direction), CONNECT_ONE_SHOT)
+	else:
+		_resolve_melee_hit(w, origin, direction)
+	return true
+
+
+## Traces the blade once the swing has visually landed.
+func _resolve_melee_hit(w: WeaponData, origin: Vector3, direction: Vector3) -> void:
+	if not is_inside_tree():
+		return
+
+	var space := get_world_3d().direct_space_state
+	var query := PhysicsRayQueryParameters3D.create(
+			origin, origin + direction.normalized() * w.melee_range, HIT_MASK)
+	query.collide_with_areas = true
+	query.collide_with_bodies = true
+	if shooter != null:
+		query.exclude = _shooter_rids()
+
+	var hit := space.intersect_ray(query)
+	if hit.is_empty():
+		return
+
+	var target := _resolve_target(hit.collider)
+	if target.is_empty():
+		AudioManager.play_3d("melee_hit_world", hit.position, -5.0, 0.1, 30.0)
+		CombatFX.spawn_impact(fx_parent, hit.position, hit.normal)
+		return
+
+	var zone: String = target["zone"]
+	var victim: Node = target["node"]
+	var damage := w.damage
+	var headshot := zone == "head"
+	if headshot:
+		damage *= w.headshot_multiplier
+
+	AudioManager.play_3d("melee_hit_flesh", hit.position, -2.0, 0.08, 35.0)
+	CombatFX.spawn_impact(fx_parent, hit.position, hit.normal, Color(0.9, 0.2, 0.2))
+
+	if victim.has_method("apply_damage"):
+		victim.apply_damage(damage, shooter, headshot)
+	hit_confirmed.emit(headshot)
+	if is_local_player:
+		AudioManager.play_2d("hitmarker_headshot" if headshot else "hitmarker", -6.0)
+
+# ------------------------------------------------------------------ throwable
+
+## Pull the pin and throw. Grenades consume from the magazine count, which for
+## a throwable is simply how many you are carrying.
+func _throw(w: WeaponData, origin: Vector3, direction: Vector3) -> bool:
+	if mags[slot] <= 0:
+		_play("wpn_dry_fire", -10.0)
+		_cooldown = 0.3
+		return false
+
+	var scene_path := w.projectile_scene
+	if not ResourceLoader.exists(scene_path):
+		push_error("WeaponSystem: missing projectile scene '%s'" % scene_path)
+		return false
+	var packed: PackedScene = load(scene_path)
+	if packed == null:
+		return false
+
+	mags[slot] -= 1
+	_cooldown = w.seconds_per_shot()
+	ammo_changed.emit(mags[slot], reserves[slot])
+
+	_play("grenade_pin", -8.0)
+	_play("grenade_throw", -6.0, 0.08)
+
+	var projectile := packed.instantiate()
+	# Parented to the level, never to the thrower, so it keeps its own momentum.
+	var host := fx_parent if fx_parent != null else get_tree().current_scene
+	host.add_child(projectile)
+	projectile.global_position = origin + direction.normalized() * 0.6
+	if projectile.has_method("setup"):
+		projectile.setup(w, shooter, direction)
+
+	fired.emit(w, w.recoil_vertical, 0.0)
+	return true
+
+
 func start_reload() -> void:
 	var w := current()
 	if w == null or is_reloading:
+		return
+	if w.is_melee() or w.is_throwable():
 		return
 	if mags[slot] >= w.mag_size or reserves[slot] <= 0:
 		return
@@ -200,6 +304,13 @@ func next_weapon() -> void:
 	if weapons.size() < 2:
 		return
 	switch_to((slot + 1) % weapons.size())
+
+
+## Step through the loadout, wrapping at either end.
+func cycle(step: int) -> void:
+	if weapons.size() < 2:
+		return
+	switch_to(wrapi(slot + step, 0, weapons.size()))
 
 
 func switch_to(index: int) -> void:

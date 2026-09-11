@@ -8,6 +8,7 @@ const DANGER := Color(0.95, 0.28, 0.28)
 const DIM := Color(1, 1, 1, 0.55)
 
 var crosshair: Crosshair
+var weapon_bar: WeaponBar
 var _score_label: Label
 var _round_label: Label
 var _timer_label: Label
@@ -25,6 +26,7 @@ var _player: PlayerController
 var _round_manager: RoundManager
 var _announce_timer := 0.0
 var _vignette_alpha := 0.0
+var _current_weapon: WeaponData
 
 
 func _ready() -> void:
@@ -43,6 +45,9 @@ func bind(player: PlayerController, manager: RoundManager) -> void:
 	player.weapons.hit_confirmed.connect(_on_hit_confirmed)
 	player.weapons.reload_started.connect(_on_reload_started)
 	player.weapons.reload_finished.connect(_on_reload_finished)
+
+	weapon_bar.bind(player.weapons)
+	weapon_bar.slot_requested.connect(player.weapons.switch_to)
 
 	manager.announce.connect(show_announcement)
 	manager.countdown.connect(_on_countdown)
@@ -164,6 +169,12 @@ func _build() -> void:
 	_reload_label = _make_label("", 15, ACCENT, HORIZONTAL_ALIGNMENT_RIGHT)
 	right.add_child(_reload_label)
 
+	# --- bottom right: Free Fire style weapon slots -----------------------
+	weapon_bar = WeaponBar.new()
+	weapon_bar.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	weapon_bar.position = Vector2(-266, -290)
+	root.add_child(weapon_bar)
+
 
 func _make_label(text: String, size_px: int, color: Color,
 		align := HORIZONTAL_ALIGNMENT_LEFT) -> Label:
@@ -244,13 +255,27 @@ func _on_damaged(_amount: float, _attacker: Node, _headshot: bool) -> void:
 
 
 func _on_ammo_changed(mag: int, reserve: int) -> void:
+	# A blade has no ammo and a grenade has a count, not a magazine.
+	if _current_weapon != null and _current_weapon.is_melee():
+		_ammo_label.text = "-"
+		_ammo_label.modulate = Color.WHITE
+		return
+	if _current_weapon != null and _current_weapon.is_throwable():
+		_ammo_label.text = "x%d" % mag
+		_ammo_label.modulate = DANGER if mag == 0 else Color.WHITE
+		return
+
 	_ammo_label.text = "%d / %d" % [mag, reserve]
 	_ammo_label.modulate = DANGER if mag == 0 else (
 			Color(1.0, 0.8, 0.35) if mag <= 5 else Color.WHITE)
 
 
 func _on_weapon_changed(weapon: WeaponData, _slot: int) -> void:
+	_current_weapon = weapon
 	_weapon_label.text = weapon.display_name.to_upper()
+	# Re-render the ammo line in the new weapon's format.
+	if _player != null:
+		_on_ammo_changed(_player.weapons.mag(), _player.weapons.reserve())
 
 
 func _on_hit_confirmed(headshot: bool) -> void:

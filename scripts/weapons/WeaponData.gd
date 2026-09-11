@@ -5,7 +5,7 @@ class_name WeaponData
 ## Everything the firing code needs lives here, so balancing the arsenal never
 ## means touching WeaponSystem.
 
-enum Category { PISTOL, SMG, RIFLE, SNIPER, SHOTGUN }
+enum Category { PISTOL, SMG, RIFLE, SNIPER, SHOTGUN, MELEE, THROWABLE }
 
 @export_group("Identity")
 @export var id: String = "weapon"
@@ -72,7 +72,34 @@ enum Category { PISTOL, SMG, RIFLE, SNIPER, SHOTGUN }
 @export var viewmodel_scale: float = 1.0
 @export var muzzle_flash_scale: float = 1.0
 
+@export_group("Melee")
+## How far the blade reaches. Only used by MELEE weapons.
+@export var melee_range: float = 2.2
+## Half-angle of the swing sweep, in degrees. A wider arc is more forgiving.
+@export var melee_arc: float = 22.0
+## Seconds between the swing starting and the damage being applied, so the hit
+## lands when the blade visually connects rather than on the button press.
+@export var melee_hit_delay: float = 0.12
+
+@export_group("Throwable")
+## Initial speed the grenade leaves the hand at, in m/s.
+@export var throw_force: float = 16.0
+## Extra upward push so a flat throw still arcs.
+@export var throw_arc: float = 4.0
+## Seconds from the pin pulling to detonation.
+@export var fuse_time: float = 2.6
+## Damage at the centre of the blast, falling off to zero at blast_radius.
+@export var blast_damage: float = 130.0
+@export var blast_radius: float = 7.0
+## Scene spawned when thrown. Defaults to the shared grenade projectile.
+@export var projectile_scene: String = "res://scenes/weapons/Grenade.tscn"
+
 @export_group("Model")
+## Real-world length of the weapon in metres. Downloaded models arrive at wildly
+## different scales - a Quaternius rifle imports 5.2 m long - so the model is
+## measured on load and scaled to this, instead of hand-tuning a magic factor
+## per model. Set to 0 to disable and use model_scale directly.
+@export var target_length: float = 0.0
 ## res:// path to a real weapon model (Free3D, Sketchfab, your own). Empty
 ## falls back to a class-shaped placeholder block, so the game never breaks
 ## waiting on art.
@@ -113,6 +140,43 @@ func has_model() -> bool:
 	return not resolve_model_path().is_empty()
 
 
+## Longest dimension of every mesh under root, in root-local metres.
+static func longest_axis(root: Node3D) -> float:
+	var meshes: Array[MeshInstance3D] = []
+	_gather_meshes(root, meshes)
+	if meshes.is_empty():
+		return 0.0
+	var total := AABB()
+	var first := true
+	for mi in meshes:
+		var box := mi.transform * mi.get_aabb()
+		if first:
+			total = box
+			first = false
+		else:
+			total = total.merge(box)
+	var s := total.size
+	return maxf(s.x, maxf(s.y, s.z))
+
+
+static func _gather_meshes(node: Node, out: Array[MeshInstance3D]) -> void:
+	if node is MeshInstance3D:
+		out.append(node as MeshInstance3D)
+	for child in node.get_children():
+		_gather_meshes(child, out)
+
+
+## Uniform scale that brings an instanced model to target_length. Falls back to
+## the manual model_scale when auto-fit is off or the model cannot be measured.
+func fit_scale(root: Node3D) -> float:
+	if target_length <= 0.0:
+		return model_scale
+	var length := longest_axis(root)
+	if length <= 0.001:
+		return model_scale
+	return target_length / length
+
+
 func seconds_per_shot() -> float:
 	return 60.0 / maxf(fire_rate, 1.0)
 
@@ -128,4 +192,13 @@ func falloff_scale(distance: float) -> float:
 
 
 func category_name() -> String:
-	return ["PISTOL", "SMG", "RIFLE", "SNIPER", "SHOTGUN"][int(category)]
+	return ["PISTOL", "SMG", "RIFLE", "SNIPER", "SHOTGUN", "MELEE",
+			"THROWABLE"][int(category)]
+
+
+func is_melee() -> bool:
+	return category == Category.MELEE
+
+
+func is_throwable() -> bool:
+	return category == Category.THROWABLE

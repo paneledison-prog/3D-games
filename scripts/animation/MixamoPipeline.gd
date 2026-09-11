@@ -102,6 +102,26 @@ static func strip_root_motion(anim: Animation) -> int:
 	return removed
 
 
+## How fast the clip was authored to travel, in metres per second, taken from
+## the hip track before root motion is stripped. The runtime divides the
+## character's real speed by this to pick a playback rate, which is what stops
+## the feet sliding.
+static func measure_authored_speed(anim: Animation) -> float:
+	for i in anim.get_track_count():
+		if anim.track_get_type(i) != Animation.TYPE_POSITION_3D:
+			continue
+		if not String(anim.track_get_path(i)).to_lower().ends_with("hips"):
+			continue
+		var keys := anim.track_get_key_count(i)
+		if keys < 2:
+			return 0.0
+		var first: Vector3 = anim.track_get_key_value(i, 0)
+		var last: Vector3 = anim.track_get_key_value(i, keys - 1)
+		var travel := Vector2(last.x - first.x, last.z - first.z).length()
+		return travel / maxf(anim.length, 0.001)
+	return 0.0
+
+
 ## Make the first and last keys identical so a looping clip does not pop.
 static func set_loop(anim: Animation, looping: bool) -> void:
 	anim.loop_mode = Animation.LOOP_LINEAR if looping else Animation.LOOP_NONE
@@ -165,11 +185,15 @@ static func build(strip_prefix := true, in_place := true) -> Dictionary:
 			var anim: Animation = player.get_animation(source_names[idx]).duplicate(true)
 			var final_name := clip_name if idx == 0 else "%s_%d" % [clip_name, idx]
 
+			# Must be measured before the hip track is removed.
+			var authored := measure_authored_speed(anim)
+
 			if strip_prefix:
 				strip_bone_prefix(anim)
 			if in_place and IN_PLACE.has(final_name):
 				strip_root_motion(anim)
 			set_loop(anim, LOOPING.has(final_name))
+			anim.set_meta("authored_speed", authored)
 
 			if library.has_animation(final_name):
 				library.remove_animation(final_name)
@@ -180,6 +204,7 @@ static func build(strip_prefix := true, in_place := true) -> Dictionary:
 				"length": anim.length,
 				"looping": LOOPING.has(final_name),
 				"tracks": anim.get_track_count(),
+				"authored_speed": authored,
 			})
 
 		scene.queue_free()

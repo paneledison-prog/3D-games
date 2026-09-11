@@ -6,9 +6,12 @@ class_name PlayerController
 signal died(attacker: Node)
 signal respawned()
 
-const WALK_SPEED := 5.2
-const SPRINT_SPEED := 7.6
-const CROUCH_SPEED := 2.6
+# Tuned against the animation set: Rifle Run is authored at 2.89 m/s, and the
+# animator clamps playback to 1.9x, so anything past ~5.5 m/s cannot be shown
+# without the feet skating. Raising these means downloading a faster clip.
+const WALK_SPEED := 4.2
+const SPRINT_SPEED := 5.5
+const CROUCH_SPEED := 1.9
 const ACCEL_GROUND := 12.0
 const ACCEL_AIR := 3.0
 const FRICTION := 14.0
@@ -22,7 +25,13 @@ const CROUCH_LERP := 11.0
 
 const PITCH_LIMIT := deg_to_rad(89.0)
 const BASE_FOV := 78.0
-const FOOTSTEP_DISTANCE := 2.1
+const TP_FOV := 74.0
+## Over-the-shoulder distance, and how far the camera tucks in while aiming.
+const TP_SPRING := 2.1
+const TP_SPRING_ADS := 1.25
+## One Rifle Run cycle covers 2.12 m in two steps, so a footfall every ~1.05 m
+## lines the audio up with the feet actually hitting the ground.
+const FOOTSTEP_DISTANCE := 1.05
 
 @onready var head: Node3D = $Head
 @onready var camera: Camera3D = $Head/Camera
@@ -33,6 +42,8 @@ const FOOTSTEP_DISTANCE := 2.1
 @onready var health: Health = $Health
 @onready var animator: CharacterAnimator = $Animator
 @onready var rig: CharacterRig = $Body
+@onready var spring_arm: SpringArm3D = $Head/SpringArm
+@onready var tp_camera: Camera3D = $Head/SpringArm/TPCamera
 
 var input_enabled := true
 var _yaw := 0.0
@@ -44,6 +55,9 @@ var _sprinting := false
 var _step_accum := 0.0
 var _target_fov := BASE_FOV
 var _capsule: CapsuleShape3D
+## Third person draws the character and hides the viewmodel; first person does
+## the opposite. Toggled with T.
+var third_person := false
 
 
 func _ready() -> void:
@@ -70,6 +84,7 @@ func _ready() -> void:
 	camera.fov = BASE_FOV
 	_yaw = rotation.y
 
+	_apply_view_mode()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
@@ -85,6 +100,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		var dy := motion.relative.y * sens * (-1.0 if GameState.invert_y else 1.0)
 		_pitch = clampf(_pitch - dy, -PITCH_LIMIT, PITCH_LIMIT)
 
+	# The mouse is captured during play, so the wheel is the natural way to
+	# flick between slots without taking a hand off the movement keys.
+	if event is InputEventMouseButton and event.pressed and input_enabled:
+		var button := (event as InputEventMouseButton).button_index
+		if button == MOUSE_BUTTON_WHEEL_UP:
+			weapons.cycle(-1)
+		elif button == MOUSE_BUTTON_WHEEL_DOWN:
+			weapons.cycle(1)
+
+	if event.is_action_pressed(&"toggle_view"):
+		third_person = not third_person
+		_apply_view_mode()
+
 	if event.is_action_pressed(&"pause"):
 		_toggle_mouse()
 
@@ -93,7 +121,7 @@ func _physics_process(delta: float) -> void:
 	if health.is_dead:
 		velocity = velocity.move_toward(Vector3.ZERO, FRICTION * delta)
 		move_and_slide()
-		animator.update(delta, 0.0, 0.0, 0.0, false, false)
+		animator.update(delta, 0.0, 0.0, 0.0, false, false, false, 0.0)
 		return
 
 	_update_stance(delta)
@@ -102,12 +130,59 @@ func _physics_process(delta: float) -> void:
 	_update_weapons(delta)
 	_update_footsteps(delta)
 
-	var speed_ratio: float = Vector2(velocity.x, velocity.z).length() / SPRINT_SPEED
+	var planar := Vector2(velocity.x, velocity.z).length()
 	var local_vel := global_transform.basis.inverse() * velocity
-	animator.update(delta, clampf(speed_ratio, 0.0, 1.0),
+	animator.update(delta, clampf(planar / SPRINT_SPEED, 0.0, 1.0),
 			clampf(-local_vel.z / SPRINT_SPEED, -1.0, 1.0),
 			clampf(local_vel.x / SPRINT_SPEED, -1.0, 1.0),
-			_crouching, not is_on_floor(), weapons.is_aiming)
+			_crouching, not is_on_floor(), weapons.is_aiming, planar)
+
+## Point the right camera, and make the body and viewmodel agree with it.
+func _apply_view_mode() -> void:
+	if third_person:
+		tp_camera.current = true
+	else:
+		camera.current = true
+
+	# The owner's body is shadow-only in first person so it never fills the
+	# lens; in third person it is the thing you are looking at.
+	rig.set_shadows_only(not third_person)
+
+	var view_model := weapons.get_node_or_null("ViewModel")
+	if view_model != null:
+		view_model.visible = not third_person
+
+
+func active_camera() -> Camera3D:
+	return tp_camera if third_person else camera
+
+
+## Where the shot actually starts and which way it goes.
+##
+## In first person that is simply the camera. In third person the camera sits
+## behind and to the side, so firing along it would send rounds from over the
+## shoulder at an angle. Instead the crosshair is projected into the world and
+## the shot is fired from the character toward that point, which is what makes
+## the reticle agree with where bullets land.
+func aim_ray() -> Array:
+	if not third_person:
+		return [camera.global_position, -camera.global_transform.basis.z]
+
+	var cam_origin := tp_camera.global_position
+	var cam_forward := -tp_camera.global_transform.basis.z
+	var far_point := cam_origin + cam_forward * 500.0
+
+	var space := get_world_3d().direct_space_state
+	var query := PhysicsRayQueryParameters3D.create(cam_origin, far_point,
+			WeaponSystem.HIT_MASK)
+	query.collide_with_areas = true
+	query.exclude = [get_rid(), head_box.get_rid()]
+	var hit := space.intersect_ray(query)
+	if not hit.is_empty():
+		far_point = hit.position
+
+	var muzzle_origin := head.global_position
+	return [muzzle_origin, (far_point - muzzle_origin).normalized()]
 
 # ------------------------------------------------------------------- movement
 
@@ -196,7 +271,14 @@ func _update_look(delta: float) -> void:
 	rotation.y = _yaw + _recoil_yaw
 	head.rotation.x = clampf(_pitch + _recoil_pitch, -PITCH_LIMIT, PITCH_LIMIT)
 
-	camera.fov = lerpf(camera.fov, _target_fov, delta * 12.0)
+	if third_person:
+		tp_camera.fov = lerpf(tp_camera.fov, _target_fov * (TP_FOV / BASE_FOV),
+				delta * 12.0)
+		# Aiming pulls the camera in over the shoulder rather than zooming.
+		spring_arm.spring_length = lerpf(spring_arm.spring_length,
+				TP_SPRING_ADS if weapons.is_aiming else TP_SPRING, delta * 10.0)
+	else:
+		camera.fov = lerpf(camera.fov, _target_fov, delta * 12.0)
 
 # -------------------------------------------------------------------- weapons
 
@@ -224,6 +306,13 @@ func _update_weapons(delta: float) -> void:
 		weapons.switch_to(0)
 	if Input.is_action_just_pressed(&"weapon_2"):
 		weapons.switch_to(1)
+	if Input.is_action_just_pressed(&"weapon_3"):
+		weapons.switch_to(2)
+	if Input.is_action_just_pressed(&"weapon_4"):
+		weapons.switch_to(3)
+	# V is a shortcut straight to the blade rather than a separate attack.
+	if Input.is_action_just_pressed(&"melee"):
+		weapons.switch_to(2)
 
 	var wants_fire := Input.is_action_pressed(&"fire") if (w != null and w.automatic) \
 			else Input.is_action_just_pressed(&"fire")

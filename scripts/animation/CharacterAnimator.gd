@@ -15,6 +15,16 @@ const LIBRARY_PATH := MixamoPipeline.OUT_PATH
 const LIBRARY_NAME := "mixamo"
 const BLEND_TIME := 0.14
 
+## Playback rate is clamped so speed-matching never turns a jog into a blur or
+## a crawl. Anything outside this means the movement speed and the clip are too
+## far apart and a different clip should be downloaded instead.
+const MIN_RATE := 0.6
+const MAX_RATE := 1.9
+
+## Forward locomotion clips, ranked at runtime by how close their authored
+## speed is to how fast the character is actually moving.
+const LOCOMOTION := ["walk_fwd", "run_fwd", "sprint"]
+
 @export var animation_player_path: NodePath
 ## Mesh root used for procedural motion when no clips are available.
 @export var placeholder_visual_path: NodePath
@@ -31,6 +41,8 @@ var _state := ""
 var _action: Action = Action.NONE
 var _action_timer := 0.0
 var _bob_phase := 0.0
+## clip name -> metres per second the clip was authored to travel at.
+var _authored: Dictionary = {}
 
 # Gameplay inputs, refreshed each frame by the owning character.
 var speed_ratio := 0.0
@@ -40,6 +52,8 @@ var is_crouching := false
 var is_airborne := false
 var is_aiming := false
 var is_dead := false
+## Real ground speed in m/s. Drives both clip choice and playback rate.
+var speed_mps := 0.0
 
 
 func _ready() -> void:
@@ -70,11 +84,21 @@ func _load_library() -> void:
 	_player.add_animation_library(LIBRARY_NAME, lib)
 	has_clips = true
 
+	_authored.clear()
+	for clip_name in lib.get_animation_list():
+		var a: Animation = lib.get_animation(clip_name)
+		_authored[clip_name] = float(a.get_meta("authored_speed", 0.0))
+
 	if verbose:
 		var missing := MixamoPipeline.missing_clips(lib)
 		print("CharacterAnimator: loaded %d clips%s" % [
 			lib.get_animation_list().size(),
 			"" if missing.is_empty() else " (missing: %s)" % ", ".join(missing)])
+
+
+## The animation state the character is currently in, for HUD or diagnostics.
+func current_clip() -> String:
+	return _state
 
 
 ## Late-bind the articulated stand-in, so the procedural fallback poses a real
@@ -99,8 +123,10 @@ func bind_animation_player(player: AnimationPlayer, skeleton: Skeleton3D = null)
 
 ## Called every frame by PlayerController / BotController.
 func update(delta: float, p_speed_ratio: float, p_forward: float, p_strafe: float,
-		p_crouching: bool, p_airborne: bool, p_aiming := false) -> void:
+		p_crouching: bool, p_airborne: bool, p_aiming := false,
+		p_speed_mps := 0.0) -> void:
 	speed_ratio = p_speed_ratio
+	speed_mps = p_speed_mps
 	forward = p_forward
 	strafe = p_strafe
 	is_crouching = p_crouching
@@ -118,8 +144,20 @@ func update(delta: float, p_speed_ratio: float, p_forward: float, p_strafe: floa
 		_play(wanted)
 		state_changed.emit(wanted)
 
+	# Re-applied every frame, not just on a state change: the character
+	# accelerates and decelerates continuously, and the stride has to track it
+	# or the feet start skating again.
+	if has_clips and _player != null:
+		_player.speed_scale = _playback_rate(_state) if _is_locomotion(_state) else 1.0
+
 	if not has_clips:
 		_procedural(delta)
+
+
+## States whose playback rate is matched to ground speed.
+func _is_locomotion(state: String) -> bool:
+	return state in ["walk_fwd", "walk_back", "walk_left", "walk_right",
+			"run_fwd", "sprint", "crouch_walk"]
 
 
 func play_action(action: Action, duration: float) -> void:
@@ -175,7 +213,33 @@ func _resolve_state() -> String:
 		return "walk_right" if strafe > 0.0 else "walk_left"
 	if forward < -0.1:
 		return "walk_back"
-	return "run_fwd" if speed_ratio > 0.75 else "walk_fwd"
+	return _best_locomotion()
+
+
+## Of the forward clips actually present, the one whose authored stride is
+## closest to the current speed. Picking by stride rather than by a fixed
+## speed threshold keeps the playback rate near 1.0, which is what makes the
+## footfalls land instead of skate.
+func _best_locomotion() -> String:
+	var best := "walk_fwd"
+	var best_diff := INF
+	for clip in LOCOMOTION:
+		var authored: float = _authored.get(clip, 0.0)
+		if authored <= 0.01:
+			continue
+		var diff: float = absf(speed_mps - authored)
+		if diff < best_diff:
+			best_diff = diff
+			best = clip
+	return best
+
+
+## How fast to play a clip so its feet travel at the character's real speed.
+func _playback_rate(clip: String) -> float:
+	var authored: float = _authored.get(clip, 0.0)
+	if authored <= 0.01 or speed_mps <= 0.05:
+		return 1.0
+	return clampf(speed_mps / authored, MIN_RATE, MAX_RATE)
 
 
 func _play(clip: String) -> void:

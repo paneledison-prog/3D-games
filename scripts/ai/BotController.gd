@@ -10,8 +10,9 @@ signal died(attacker: Node)
 
 enum Action { PATROL, ATTACK, TAKE_COVER, RELOAD, RETREAT, DEAD }
 
-const WALK_SPEED := 4.6
-const CHASE_SPEED := 6.4
+# Kept inside the same animation-speed envelope as the player.
+const WALK_SPEED := 4.0
+const CHASE_SPEED := 5.4
 const ACCEL := 10.0
 const FRICTION := 12.0
 
@@ -114,7 +115,7 @@ func _physics_process(delta: float) -> void:
 	if current_action == Action.DEAD:
 		velocity = velocity.move_toward(Vector3.ZERO, FRICTION * delta)
 		move_and_slide()
-		animator.update(delta, 0.0, 0.0, 0.0, false, false)
+		animator.update(delta, 0.0, 0.0, 0.0, false, false, false, 0.0)
 		return
 
 	if not enabled:
@@ -139,12 +140,14 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_update_footsteps(delta)
 
-	var speed_ratio: float = Vector2(velocity.x, velocity.z).length() / CHASE_SPEED
+	var planar := Vector2(velocity.x, velocity.z).length()
 	var local_vel := global_transform.basis.inverse() * velocity
-	animator.update(delta, clampf(speed_ratio, 0.0, 1.0),
+	# Real speed is passed through so the animator can match stride to movement
+	# instead of playing the clip at a fixed rate and skating.
+	animator.update(delta, clampf(planar / CHASE_SPEED, 0.0, 1.0),
 			clampf(-local_vel.z / CHASE_SPEED, -1.0, 1.0),
 			clampf(local_vel.x / CHASE_SPEED, -1.0, 1.0),
-			false, not is_on_floor(), current_action == Action.ATTACK)
+			false, not is_on_floor(), current_action == Action.ATTACK, planar)
 
 
 # ------------------------------------------------------------------ utility AI
@@ -481,7 +484,8 @@ func _update_footsteps(delta: float) -> void:
 	if planar < 0.8:
 		return
 	_step_accum += planar * delta
-	if _step_accum >= 2.1:
+	# Matches the player's stride length so both sets of footfalls read alike.
+	if _step_accum >= 1.05:
 		_step_accum = 0.0
 		AudioManager.play_footstep(global_position, -6.0)
 

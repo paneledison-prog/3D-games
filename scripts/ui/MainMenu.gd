@@ -199,9 +199,11 @@ func _cycle_weapon(step: int) -> void:
 func _on_play() -> void:
 	AudioManager.play_2d("ui_click", -4.0)
 	GameState.difficulty = _difficulty
-	GameState.player_loadout = [PRIMARIES[_primary][0], "pistol_talon"]
+	var kit: Array[String] = [PRIMARIES[_primary][0], "pistol_talon",
+			"knife_bayonet", "grenade_frag"]
+	GameState.player_loadout = kit.duplicate()
 	# The bot mirrors the player's primary so every duel is a fair mirror match.
-	GameState.bot_loadout = [PRIMARIES[_primary][0], "pistol_talon"]
+	GameState.bot_loadout = kit.duplicate()
 
 	if not _characters.is_empty():
 		GameState.player_character = _characters[_character].id

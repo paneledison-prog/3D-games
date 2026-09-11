@@ -170,6 +170,32 @@ def main():
                           pad(delay(mech_click(108, 1000, 0.020, 0.11), 0.07), 0.26))))
     made.append(write("wpn_swap", mech_click(109, 1200, 0.022, 0.16)))
 
+    # --- melee -------------------------------------------------------------
+    # A swing is mostly air: band-passed noise that rises then falls away.
+    made.append(write("melee_swing",
+                      gain(decay(lowpass(highpass(noise(0.26, 211), 700), 3200, 2),
+                                 0.055, 0.03), 0.85)))
+    made.append(write("melee_hit_flesh",
+                      mix(decay(lowpass(noise(0.22, 213), 620, 2), 0.040),
+                          gain(decay(sine(0.22, 150, 70), 0.05), 0.55))))
+    made.append(write("melee_hit_world",
+                      mix(decay(highpass(noise(0.24, 215), 2200, 2), 0.028),
+                          gain(decay(sine(0.24, 2600, 1500), 0.09), 0.5))))
+
+    # --- throwables --------------------------------------------------------
+    made.append(write("grenade_pin", mech_click(221, 3200, 0.008, 0.07)))
+    made.append(write("grenade_throw",
+                      gain(decay(lowpass(noise(0.20, 223), 1800, 2), 0.045, 0.02), 0.7)))
+    made.append(write("grenade_bounce",
+                      mix(decay(lowpass(noise(0.12, 225), 900, 2), 0.018),
+                          gain(decay(sine(0.12, 320, 190), 0.03), 0.45))))
+    # Explosion: deep body, a bright crack on top, and a long filtered tail.
+    made.append(write("explosion",
+                      mix(gain(decay(sine(2.0, 58, 26), 0.42), 1.0),
+                          gain(decay(highpass(noise(2.0, 227), 900, 2), 0.30), 0.9),
+                          gain(decay(lowpass(noise(2.0, 229), 420, 2), 0.85, 0.01), 0.55),
+                          gain(pad(decay(highpass(noise(0.05, 231), 4000), 0.004), 2.0), 0.6))))
+
     # --- impacts / feedback ------------------------------------------------
     made.append(write("impact_concrete", decay(highpass(noise(0.16, 131), 900, 2), 0.030)))
     made.append(write("impact_metal",

@@ -20,8 +20,11 @@ var difficulty: Difficulty = Difficulty.VETERAN
 var match_over := false
 
 ## Loadout chosen in the menu, referenced by weapon id.
-var player_loadout: Array[String] = ["ar_falcon", "pistol_talon"]
-var bot_loadout: Array[String] = ["ar_falcon", "pistol_talon"]
+## Four slots: primary, sidearm, knife, grenade.
+var player_loadout: Array[String] = [
+	"ar_falcon", "pistol_talon", "knife_bayonet", "grenade_frag"]
+var bot_loadout: Array[String] = [
+	"ar_falcon", "pistol_talon", "knife_bayonet", "grenade_frag"]
 
 ## Character chosen in the menu, referenced by CharacterProfile id. Every model
 ## is auto-fitted to the same 1.8m height, so this is cosmetic only - no

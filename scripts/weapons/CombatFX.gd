@@ -83,6 +83,48 @@ static func spawn_impact(parent: Node, position: Vector3, normal: Vector3,
 	tw.tween_callback(puff.queue_free)
 
 
+## Expanding flash plus a bright falling light, sized to the blast radius so
+## what you see matches what actually damages you.
+static func spawn_explosion(parent: Node, position: Vector3, radius: float) -> void:
+	if parent == null or not parent.is_inside_tree():
+		return
+
+	var light := OmniLight3D.new()
+	light.light_color = Color(1.0, 0.72, 0.35)
+	light.light_energy = 14.0
+	light.omni_range = radius * 2.2
+	light.shadow_enabled = false
+	parent.add_child(light)
+	light.global_position = position
+
+	var ball := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.5
+	sphere.height = 1.0
+	sphere.radial_segments = 16
+	sphere.rings = 8
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.albedo_color = Color(1.0, 0.78, 0.42, 0.95)
+	ball.mesh = sphere
+	ball.material_override = mat
+	ball.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(ball)
+	ball.global_position = position
+	ball.scale = Vector3.ONE * 0.4
+
+	var tw := ball.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(ball, "scale", Vector3.ONE * radius * 1.6, 0.34) \
+			.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	tw.tween_property(mat, "albedo_color:a", 0.0, 0.42)
+	tw.tween_property(light, "light_energy", 0.0, 0.5)
+	tw.chain().tween_callback(light.queue_free)
+	tw.tween_callback(ball.queue_free)
+
+
 ## Punchy one-frame muzzle light. Cheap, and it sells the shot in a dark arena.
 static func flash_muzzle(muzzle: Node3D, scale := 1.0) -> void:
 	if muzzle == null or not muzzle.is_inside_tree():

@@ -18,7 +18,35 @@ func _ready() -> void:
 
 	hud.bind(player, round_manager)
 	round_manager.match_ended.connect(_on_match_ended)
+
+	if "--selftest" in OS.get_cmdline_user_args():
+		_start_selftest()
+
 	round_manager.begin_match()
+
+
+## Headless match check: logs every round transition and the animation state of
+## both fighters, then exits. Run with
+##     godot --headless --path . res://scenes/main/Main.tscn -- --selftest
+func _start_selftest() -> void:
+	print("[selftest] player character : %s (model=%s, clips=%s)" % [
+		GameState.player_character, player.rig.has_model, player.animator.has_clips])
+	print("[selftest] bot character    : %s (model=%s, clips=%s)" % [
+		GameState.bot_character, bot.rig.has_model, bot.animator.has_clips])
+	print("[selftest] weapon socket    : player=%s bot=%s" % [
+		player.rig.weapon_socket != null, bot.rig.weapon_socket != null])
+
+	round_manager.round_started.connect(func(n: int):
+		print("[selftest] round %d start" % n))
+	round_manager.round_ended.connect(func(won: bool, ps: int, bs: int):
+		print("[selftest] round end: %s | score %d-%d | bot anim=%s" % [
+			"player" if won else "bot", ps, bs,
+			bot.animator.current_clip()]))
+	round_manager.match_ended.connect(func(won: bool):
+		print("[selftest] MATCH OVER: %s wins %d-%d" % [
+			"player" if won else "bot",
+			GameState.player_score, GameState.bot_score])
+		get_tree().quit(0))
 
 
 ## The arena's navmesh is baked at runtime so level geometry can be edited

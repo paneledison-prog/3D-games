@@ -155,13 +155,27 @@ func equip_model(weapon: WeaponData) -> void:
 	node.position = weapon.model_offset + (profile.grip_offset if profile else Vector3.ZERO)
 	node.rotation_degrees = weapon.model_rotation \
 			+ (profile.grip_rotation if profile else Vector3.ZERO)
-	node.scale = Vector3.ONE * weapon.model_scale
+	node.scale = Vector3.ONE * weapon.fit_scale(node)
 
 	weapon_socket.add_child(node)
 	_weapon_model = node
 
 	if shadows_only:
 		_set_shadows_only(node)
+
+
+## Flip the whole body between fully drawn and shadow-only. Third person needs
+## to see the character; first person must not have it in front of the lens.
+func set_shadows_only(value: bool) -> void:
+	shadows_only = value
+	var mode := GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if value 			else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	for root in [model_root, _placeholder, _weapon_model]:
+		if root == null or not is_instance_valid(root):
+			continue
+		var meshes: Array[MeshInstance3D] = []
+		_collect_meshes(root, meshes)
+		for mi in meshes:
+			mi.cast_shadow = mode
 
 
 func _placeholder_gun(weapon: WeaponData) -> Node3D:

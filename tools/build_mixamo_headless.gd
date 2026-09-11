@@ -29,11 +29,14 @@ func _initialize() -> void:
 	clips.sort_custom(func(a, b): return a["name"] < b["name"])
 	print("clips extracted    : %d" % clips.size())
 	print("")
-	print("  %-14s %-26s %8s %7s %s" % ["CLIP", "SOURCE", "LENGTH", "TRACKS", "LOOP"])
+	print("  %-14s %-24s %8s %7s %6s %s" % [
+		"CLIP", "SOURCE", "LENGTH", "TRACKS", "LOOP", "AUTHORED"])
 	for c in clips:
-		print("  %-14s %-26s %7.2fs %7d %s" % [
-			c["name"], String(c["source"]).left(26), c["length"], c["tracks"],
-			"yes" if c["looping"] else "-"])
+		var spd: float = c.get("authored_speed", 0.0)
+		print("  %-14s %-24s %7.2fs %7d %6s %s" % [
+			c["name"], String(c["source"]).left(24), c["length"], c["tracks"],
+			"yes" if c["looping"] else "-",
+			("%.2f m/s" % spd) if spd > 0.01 else "in-place"])
 
 	var skipped: Array = report["skipped"]
 	if not skipped.is_empty():

@@ -71,7 +71,9 @@ func _rebuild(weapon: WeaponData) -> void:
 		node = _placeholder(weapon)
 
 	node.rotation_degrees = weapon.viewmodel_rotation
-	node.scale = Vector3.ONE * weapon.viewmodel_scale * weapon.viewmodel_model_scale
+	# Measured against the instanced model, so any download lands the right size.
+	var fitted := weapon.fit_scale(node)
+	node.scale = Vector3.ONE * fitted * weapon.viewmodel_scale 			* weapon.viewmodel_model_scale
 	add_child(node)
 	_model = node
 
